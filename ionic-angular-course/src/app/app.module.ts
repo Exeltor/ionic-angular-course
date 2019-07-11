@@ -21,3 +21,5 @@ import { AppRoutingModule } from './app-routing.module';
   bootstrap: [AppComponent]
 })
 export class AppModule {}
+
+// ionic generate en consola para hacer un nuevo elemento ionic/angular
