@@ -65,7 +65,7 @@ export class PlaceDetailPage implements OnInit {
     // ComponentProps para pasar datos al modal en forma clave/valor
     // Tambien se puede asignar una "id"
     this.modalCtrl
-    .create({component: CreateBookingComponent, componentProps: {selectedPlace: this.place}})
+    .create({component: CreateBookingComponent, componentProps: {selectedPlace: this.place, selectedMode: mode}})
     .then(modalEl => {
       modalEl.present();
       // Devolver esto para leer los datos obtenidos del Modal (es una Promise, por tanto se debe leer con ".then")
