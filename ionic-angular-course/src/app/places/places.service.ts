@@ -61,8 +61,10 @@ export class PlacesService {
       price,
       dateFrom,
       dateTo,
-      this.authService.userId);
+      this.authService.userId
+    );
 
-      this.places.push(newPlace);
+    this._places.push(newPlace);
+    console.log(this._places);
   }
 }
