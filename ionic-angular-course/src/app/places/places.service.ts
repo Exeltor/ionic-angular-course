@@ -1,49 +1,26 @@
 import { Injectable } from '@angular/core';
 import { Place } from './place.model'
 import { AuthService } from '../auth/auth.service';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { take, map, tap, delay, switchMap } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
+
+interface PlaceData {
+  availableFrom: string;
+  availableTo: string;
+  description: string;
+  imageUrl: string;
+  price: number;
+  title: string;
+  userId: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class PlacesService {
   // BehaviourSubject para marcar que los componentes se pueden suscribir a esto como observable
-  private _places = new BehaviorSubject<Place[]>([
-    new Place(
-      'p1',
-      'Manhattan Mansion',
-      'In the heart of New York City',
-      'https://imgs.6sqft.com/wp-content/uploads/2014/06/21042533/Carnegie-Mansion-nyc.jpg',
-      149.99,
-      new Date('2019-01-01'),
-      new Date('2019-12-31'),
-      'abc'
-    ),
-    new Place(
-      'p2',
-      "L'Amour Tojours",
-      'Romantic place in Paris',
-      'https://i.ytimg.com/vi/NQv9Z-LZ618/hqdefault.jpg',
-      189.99,
-      new Date('2019-01-01'),
-      new Date('2019-12-31'),
-      'abc'
-    ),
-    new Place(
-      'p3',
-      'The Foggy Palace',
-      'Not your average city trip!',
-      'https://previews.123rf.com/images/andrascsontos/andrascsontos1609/andrascsontos160900120/63752595-foggy-old-stairway-of-a-palace.jpg',
-      99.99,
-      new Date('2019-01-01'),
-      new Date('2019-12-31'),
-      'abc'
-    )
-
-
-  ]);
+  private _places = new BehaviorSubject<Place[]>([]);
 
   get places() {
     // Devolvemos el array como Observable, para que se diferentes partes se puedan suscribir a el
@@ -52,11 +29,55 @@ export class PlacesService {
 
   constructor(private authService: AuthService, private http: HttpClient) { }
 
+  fetchPlaces() {
+    // Hacemos una request 'get' a la tabla que nos interesa con la URL
+    return this.http.get<{ [key: string]: PlaceData }>('https://ionic-angular-course-a45fb.firebaseio.com/offered-places.json')
+    // Formateamos los datos obtenidos, que son guardados en una variable (en este caso 'resData')
+    .pipe(map(resData => {
+      const places = [];
+      // Iteramos por todas las claves de la respuesta resData y creamos objetos Place para guardarlos en un array
+      for (const key in resData) {
+        if (resData.hasOwnProperty(key)) {
+          places.push(
+            new Place(
+              key,
+              resData[key].title,
+              resData[key].description,
+              resData[key].imageUrl,
+              resData[key].price,
+              new Date(resData[key].availableFrom),
+              new Date(resData[key].availableTo),
+              resData[key].userId
+            )
+          );
+        }
+      }
+      // Devolvemos el array formateado
+      return places;
+    }),
+    // A partir de este resultado (places), lo añadimos al array a mostrar en la aplicacion (en este caso '_places')
+      tap(places => {
+        this._places.next(places);
+      })
+    );
+  }
+
   getPlace(id: string) {
-    return this.places.pipe(take(1), map(places => {
-      // Clonamos el objeto con "..." al principio, lo buscamos con .find segun el criterio de que las id's sean iguales
-      return {...places.find(p => p.id === id)};
-    }));
+    return this.http.get<PlaceData>(
+      `https://ionic-angular-course-a45fb.firebaseio.com/offered-places/${id}.json`,
+    ).pipe(
+      map(placeData => {
+        return new Place(
+          id,
+          placeData.title,
+          placeData.description,
+          placeData.imageUrl,
+          placeData.price,
+          new Date(placeData.availableFrom),
+          new Date(placeData.availableTo),
+          placeData.userId);
+      })
+    );
   }
 
   addPlace(title: string, description: string, price: number, dateFrom: Date, dateTo: Date) {
@@ -99,9 +120,18 @@ export class PlacesService {
   }
 
   updatePlace(placeId: string, title: string, description: string) {
-    return this.places.pipe(take(1), delay(1000), tap(places => {
+    let updatedPlaces: Place[];
+    return this.places.pipe(take(1), switchMap(places => {
+      // Nos aseguramos que los sitios han sido cargados previamente
+      if (!places || places.length <= 0) {
+        return this.fetchPlaces();
+      } else {
+        return of(places);
+      }
+    }),
+    switchMap(places => {
       const updatedPlaceIndex = places.findIndex(pl => pl.id === placeId);
-      const updatedPlaces = [...places];
+      updatedPlaces = [...places];
       // Swap en el array
       const oldPlace = updatedPlaces[updatedPlaceIndex];
       updatedPlaces[updatedPlaceIndex] = new Place(
@@ -114,7 +144,11 @@ export class PlacesService {
         oldPlace.availableTo,
         oldPlace.userId
       );
-
+      return this.http.put(
+        `https://ionic-angular-course-a45fb.firebaseio.com/offered-places/${placeId}.json`,
+        { ...updatedPlaces[updatedPlaceIndex], id: null}
+      );
+    }), tap(() => {
       this._places.next(updatedPlaces);
     }));
   }

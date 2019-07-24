@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PlacesService } from '../../places.service';
-import { NavController, LoadingController } from '@ionic/angular';
+import { NavController, LoadingController, AlertController } from '@ionic/angular';
 import { Place } from '../../place.model';
 import { FormGroup, FormControl, Validators } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -15,6 +15,8 @@ import { present } from '@ionic/core/dist/types/utils/overlays';
 export class EditOfferPage implements OnInit, OnDestroy {
   place: Place;
   form: FormGroup;
+  isLoading = false;
+  placeId: string;
   placeSub: Subscription;
 
   constructor(
@@ -22,7 +24,8 @@ export class EditOfferPage implements OnInit, OnDestroy {
     private placesService: PlacesService,
     private navCtrl: NavController,
     private router: Router,
-    private loadingCtrl: LoadingController
+    private loadingCtrl: LoadingController,
+    private alertCtrl: AlertController
   ) { }
 
   // Cargamos place con la id dinamica (parte dinamica de la URL)
@@ -32,6 +35,8 @@ export class EditOfferPage implements OnInit, OnDestroy {
         this.navCtrl.navigateBack('/places/tabs/offers');
         return;
       }
+      this.placeId = paramMap.get('placeId');
+      this.isLoading = true;
       // Si la id existe, la guardamos y cargamos el sitio con la id.
       this.placeSub = this.placesService.getPlace(paramMap.get('placeId')).subscribe(place => {
         this.place = place;
@@ -45,6 +50,17 @@ export class EditOfferPage implements OnInit, OnDestroy {
             updateOn: 'blur',
             validators: [Validators.required]
           })
+        });
+        this.isLoading = false;
+      }, error => {
+        this.alertCtrl.create({
+            header: 'An error occurred',
+            message: 'Place could not be fetched. Please try again later.',
+            buttons: [{text: 'Okay', handler: () => {
+              this.router.navigate(['/places/tabs/offers']);
+            }}]
+        }).then(alertEl => {
+          alertEl.present();
         });
       });
     });

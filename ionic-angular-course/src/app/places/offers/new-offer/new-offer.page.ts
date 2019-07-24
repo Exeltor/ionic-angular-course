@@ -39,6 +39,9 @@ export class NewOfferPage implements OnInit {
       dateTo: new FormControl(null, {
         updateOn: 'blur',
         validators: [Validators.required]
+      }),
+      location: new FormControl(null, {
+        validators: [Validators.required]
       })
     });
   }

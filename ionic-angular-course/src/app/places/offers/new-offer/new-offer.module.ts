@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
 import { Routes, RouterModule } from '@angular/router';
+import { SharedModule } from 'src/app/shared/shared.module';
 
 import { IonicModule } from '@ionic/angular';
 
@@ -19,7 +20,8 @@ const routes: Routes = [
     CommonModule,
     ReactiveFormsModule,
     IonicModule,
-    RouterModule.forChild(routes)
+    RouterModule.forChild(routes),
+    SharedModule
   ],
   declarations: [NewOfferPage]
 })
