@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { Place } from './place.model'
+import { Place } from './place.model';
 import { AuthService } from '../auth/auth.service';
 import { BehaviorSubject, of } from 'rxjs';
 import { take, map, tap, delay, switchMap } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
+import { PlaceLocation } from './location.model';
 
 interface PlaceData {
   availableFrom: string;
@@ -13,6 +14,7 @@ interface PlaceData {
   price: number;
   title: string;
   userId: string;
+  location: PlaceLocation;
 }
 
 @Injectable({
@@ -47,7 +49,8 @@ export class PlacesService {
               resData[key].price,
               new Date(resData[key].availableFrom),
               new Date(resData[key].availableTo),
-              resData[key].userId
+              resData[key].userId,
+              resData[key].location
             )
           );
         }
@@ -75,12 +78,14 @@ export class PlacesService {
           placeData.price,
           new Date(placeData.availableFrom),
           new Date(placeData.availableTo),
-          placeData.userId);
+          placeData.userId,
+          placeData.location
+        );
       })
     );
   }
 
-  addPlace(title: string, description: string, price: number, dateFrom: Date, dateTo: Date) {
+  addPlace(title: string, description: string, price: number, dateFrom: Date, dateTo: Date, location: PlaceLocation) {
     let generatedId: string;
     const newPlace = new Place(
       Math.random().toString(),
@@ -90,7 +95,8 @@ export class PlacesService {
       price,
       dateFrom,
       dateTo,
-      this.authService.userId
+      this.authService.userId,
+      location
     );
 
     // Elegimos la tabla despues del '/' (en este caso 'offered-places'), igual que en MongoDB
@@ -142,7 +148,8 @@ export class PlacesService {
         oldPlace.price,
         oldPlace.availableFrom,
         oldPlace.availableTo,
-        oldPlace.userId
+        oldPlace.userId,
+        oldPlace.location
       );
       return this.http.put(
         `https://ionic-angular-course-a45fb.firebaseio.com/offered-places/${placeId}.json`,
