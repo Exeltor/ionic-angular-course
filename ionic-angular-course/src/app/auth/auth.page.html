@@ -40,7 +40,7 @@
           </ion-button>
           <!--type="submit" porque es el boton que ejecuta la form-->
           <!--Desactivamos el boton con [disabled] si la form no es valida-->
-          <ion-button type="submit" color="primary" (click)="onLogin()" expand="block" [disabled]="!f.valid">{{ isLogin ?  'Login' : 'Signup'}}</ion-button>
+          <ion-button type="submit" color="primary" expand="block" [disabled]="!f.valid">{{ isLogin ?  'Login' : 'Signup'}}</ion-button>
         </ion-col>
       </ion-row>
     </ion-grid>
