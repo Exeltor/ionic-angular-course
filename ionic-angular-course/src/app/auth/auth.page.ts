@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from './auth.service';
 import { Router } from '@angular/router';
-import { LoadingController } from '@ionic/angular';
+import { LoadingController, AlertController } from '@ionic/angular';
 import { NgForm } from '@angular/forms';
 
 @Component({
@@ -13,12 +13,12 @@ export class AuthPage implements OnInit {
   isLoading = false;
   isLogin = true;
 
-  constructor(private authService: AuthService, private router: Router, private loadingCtrl: LoadingController) { }
+  constructor(private authService: AuthService, private router: Router, private loadingCtrl: LoadingController, private alertCtrl: AlertController) { }
 
   ngOnInit() {
   }
 
-  onLogin() {
+  authenticate(email: string, password: string) {
     this.isLoading = true;
     this.authService.login();
     // LoadingController se usa para mostrar un proceso de carga mas informativo (con mensajes y diferentes ajustes)
@@ -26,11 +26,20 @@ export class AuthPage implements OnInit {
     .create({keyboardClose: true, message: 'Logging in...'})
     .then(loadingEl => {
       loadingEl.present();
-      setTimeout(() => {
+      this.authService.signup(email, password).subscribe(resData => {
+        console.log(resData);
         this.isLoading = false;
         loadingEl.dismiss();
         this.router.navigateByUrl('/places/tabs/discover');
-      }, 1500);
+      }), errRes => {
+        loadingEl.dismiss()
+        const code = errRes.error.error.message;
+        let message = 'Could not sign you up, please try again';
+        if (code === 'EMAIL_EXISTS') {
+          message = 'This email address already exists';
+        }
+        this.showAlert(message);
+      };
     });
   }
 
@@ -45,11 +54,17 @@ export class AuthPage implements OnInit {
     const password = form.value.password;
     console.log(email, password);
 
-    if (this.isLogin) {
-      // Send request to login servers
-    } else {
-      // Send request to signup servers
-    }
+    this.authenticate(email, password);
+  }
+
+  private showAlert(message: string) {
+    this.alertCtrl.create({
+      header: 'Authentication failed',
+      message: message,
+      buttons: ['Okay']
+    }).then(alertEl => {
+      alertEl.present();
+    })
   }
 
   onSwitchAuthMode() {
