@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { CanLoad, Route, UrlSegment, Router } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { AuthService } from './auth.service';
+import { take, tap, switchMap } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root'
@@ -14,12 +15,18 @@ export class AuthGuard implements CanLoad {
 
   // Metodo canLoad predefinido
   canLoad(route: Route, segments: UrlSegment[]): boolean | Observable<boolean> | Promise<boolean> {
-    // Si el usuario no esta autenticado, se redirige a la pagina de autentificacion
-    if (!this.authService.userIsAuthenticated) {
-      this.router.navigateByUrl('/auth');
-    }
-
-    // Si esta autenticado, se devuelve True
-    return this.authService.userIsAuthenticated;
+    return this.authService.userIsAuthenticated.pipe(take(1), switchMap(isAuthenticated => {
+      // Comprobamos si podemos hacer autologin con datos existentes en el dispositivo
+      if (!isAuthenticated) {
+        return this.authService.autoLogin();
+      } else {
+        return of(isAuthenticated);
+      }
+    }), tap(isAuthenticated => {
+      // Si no se ha autenticado, se vuelve a la pagina de auth de login
+      if (!isAuthenticated) {
+        this.router.navigateByUrl('/auth');
+      }
+    }));
   }
 }

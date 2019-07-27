@@ -32,10 +32,9 @@ export class PlacesService {
   constructor(private authService: AuthService, private http: HttpClient) { }
 
   fetchPlaces() {
-    // Hacemos una request 'get' a la tabla que nos interesa con la URL
-    return this.http.get<{ [key: string]: PlaceData }>('https://ionic-angular-course-a45fb.firebaseio.com/offered-places.json')
-    // Formateamos los datos obtenidos, que son guardados en una variable (en este caso 'resData')
-    .pipe(map(resData => {
+    return this.authService.token.pipe(take(1), switchMap(token => {
+      return this.http.get<{ [key: string]: PlaceData }>(`https://ionic-angular-course-a45fb.firebaseio.com/offered-places.json?auth=${token}`)
+    }), map(resData => {
       const places = [];
       // Iteramos por todas las claves de la respuesta resData y creamos objetos Place para guardarlos en un array
       for (const key in resData) {
@@ -66,10 +65,11 @@ export class PlacesService {
   }
 
   getPlace(id: string) {
-    return this.http.get<PlaceData>(
-      `https://ionic-angular-course-a45fb.firebaseio.com/offered-places/${id}.json`,
-    ).pipe(
-      map(placeData => {
+    return this.authService.token.pipe(take(1), switchMap(token => {
+      return this.http.get<PlaceData>(
+        `https://ionic-angular-course-a45fb.firebaseio.com/offered-places/${id}.json?auth=${token}`,
+      )
+    }), map(placeData => {
         return new Place(
           id,
           placeData.title,
@@ -89,35 +89,46 @@ export class PlacesService {
     const uploadData = new FormData();
     uploadData.append('image', image);
 
-    return this.http.post<{imageUrl: string, imagePath: string}>(
-      'https://us-central1-ionic-angular-course-a45fb.cloudfunctions.net/storeImage',
-      uploadData
-    );
+    return this.authService.token.pipe(take(1), switchMap(token => {
+      return this.http.post<{imageUrl: string, imagePath: string}>(
+        'https://us-central1-ionic-angular-course-a45fb.cloudfunctions.net/storeImage',
+        uploadData, {headers: {Authorization: 'Bearer ' + token}}
+      );
+    }));
+    
   }
 
   addPlace(title: string, description: string, price: number, dateFrom: Date, dateTo: Date, location: PlaceLocation, imageUrl: string) {
     let generatedId: string;
-    const newPlace = new Place(
-      Math.random().toString(),
-      title,
-      description,
-      imageUrl,
-      price,
-      dateFrom,
-      dateTo,
-      this.authService.userId,
-      location
-    );
-
-    // Elegimos la tabla despues del '/' (en este caso 'offered-places'), igual que en MongoDB
-    // primer argumento URL
-    // Segundo el dato a mandar (en este caso porque es una request 'POST')
-    return this.http.post<{name: string}>(
-      'https://ionic-angular-course-a45fb.firebaseio.com/offered-places.json',
-      { ...newPlace, id: null }
-    )
-    .pipe(
-      switchMap(resData => {
+    let newPlace: Place;
+    let fetchedUserId: string
+    return this.authService.userId.pipe(take(1), switchMap(userId => {
+      fetchedUserId = userId;
+      return this.authService.token;
+    }),take(1), switchMap(token => {
+      if (!fetchedUserId) {
+        throw new Error('No user found!');
+      }
+      newPlace = new Place(
+        Math.random().toString(),
+        title,
+        description,
+        imageUrl,
+        price,
+        dateFrom,
+        dateTo,
+        fetchedUserId,
+        location
+      );
+  
+      // Elegimos la tabla despues del '/' (en este caso 'offered-places'), igual que en MongoDB
+      // primer argumento URL
+      // Segundo el dato a mandar (en este caso porque es una request 'POST')
+      return this.http.post<{name: string}>(
+        `https://ionic-angular-course-a45fb.firebaseio.com/offered-places.json?auth=${token}`,
+        { ...newPlace, id: null }
+      )
+    }), switchMap(resData => {
         generatedId = resData.name;
         return this.places;
       }),
@@ -137,7 +148,11 @@ export class PlacesService {
 
   updatePlace(placeId: string, title: string, description: string) {
     let updatedPlaces: Place[];
-    return this.places.pipe(take(1), switchMap(places => {
+    let fetchedToken: string;
+    return this.authService.token.pipe(take(1), switchMap(token => {
+      fetchedToken = token;
+      return this.places;
+    }), take(1), switchMap(places => {
       // Nos aseguramos que los sitios han sido cargados previamente
       if (!places || places.length <= 0) {
         return this.fetchPlaces();
@@ -162,7 +177,7 @@ export class PlacesService {
         oldPlace.location
       );
       return this.http.put(
-        `https://ionic-angular-course-a45fb.firebaseio.com/offered-places/${placeId}.json`,
+        `https://ionic-angular-course-a45fb.firebaseio.com/offered-places/${placeId}.json?auth=${fetchedToken}`,
         { ...updatedPlaces[updatedPlaceIndex], id: null}
       );
     }), tap(() => {

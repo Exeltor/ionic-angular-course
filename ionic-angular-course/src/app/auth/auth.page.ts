@@ -38,6 +38,7 @@ export class AuthPage implements OnInit {
         loadingEl.dismiss();
         this.router.navigateByUrl('/places/tabs/discover');
       }, errRes => {
+        console.log(errRes);
         loadingEl.dismiss()
         const code = errRes.error.error.message;
         let message = 'Could not sign you up, please try again';
@@ -65,6 +66,7 @@ export class AuthPage implements OnInit {
     console.log(email, password);
 
     this.authenticate(email, password);
+    form.reset();
   }
 
   private showAlert(message: string) {
